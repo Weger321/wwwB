@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Учитель</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+  <header class="bg-white shadow-sm">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+      <h1 class="text-2xl font-bold">Панель учителя</h1>
+      <div class="flex gap-4">
+        <a href="profile.html" class="bg-gray-200 px-4 py-2 rounded-lg">Профиль</a>
+        <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded-lg">Выйти</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-8">
+    <!-- Добавление курса -->
+    <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+      <h2 class="text-xl font-semibold mb-4">Добавить курс</h2>
+      <form id="addCourseForm">
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-2">Название</label>
+          <input type="text" id="courseTitle" class="w-full p-3 border rounded-lg" required>
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-2">Описание</label>
+          <textarea id="courseDesc" rows="3" class="w-full p-3 border rounded-lg" required></textarea>
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-2">Срок (месяцев)</label>
+          <input type="number" id="courseDuration" min="1" class="w-full p-3 border rounded-lg" required>
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-2">Стоимость (₽)</label>
+          <input type="number" id="coursePrice" min="0" class="w-full p-3 border rounded-lg" required>
+        </div>
+        <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg">Добавить курс</button>
+      </form>
+    </div>
+
+    <!-- Мои курсы -->
+    <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+      <h2 class="text-xl font-semibold mb-4">Мои курсы</h2>
+      <div id="teacherCourses" class="space-y-4"></div>
+    </div>
+
+    <!-- Поиск учеников -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+      <h2 class="text-xl font-semibold mb-4">Поиск учеников</h2>
+      <div class="flex gap-4 mb-4">
+        <input type="text" id="searchQuery" placeholder="Введите логин или email" class="flex-1 p-3 border rounded-lg">
+        <button id="searchBtn" class="bg-blue-600 text-white px-6 py-3 rounded-lg">Найти</button>
+      </div>
+      <div id="searchResults" class="space-y-4"></div>
+    </div>
+  </main>
+
+  <script src="scripts/api.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const user = JSON.parse(localStorage.getItem('user'));
+      if (user?.role !== 'teacher') {
+        alert('Доступно только для учителей!');
+        window.location.replace('http://localhost:8000/profile.html');
+        return;
+      }
+
+      // Добавление курса
+      document.getElementById('addCourseForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const title = document.getElementById('courseTitle').value;
+        const desc = document.getElementById('courseDesc').value;
+        const duration = document.getElementById('courseDuration').value;
+        const price = document.getElementById('coursePrice').value;
+
+        try {
+          await addCourse({
+            title,
+            desc,
+            duration: `${duration} месяцев`,
+            price: parseInt(price),
+            teacher: user.login,
+            lessons: []
+          });
+
+          alert('Курс добавлен!');
+          e.target.reset();
+          loadTeacherCourses();
+        } catch (error) {
+          alert(`Ошибка: ${error.message}`);
+        }
+      });
+
+      // Загрузка курсов учителя
+      async function loadTeacherCourses() {
+        try {
+          const courses = await getCourses();
+          const teacherCourses = courses.filter(course => course.teacher === user.login);
+          const coursesList = document.getElementById('teacherCourses');
+
+          if (teacherCourses.length === 0) {
+            coursesList.innerHTML = '<p class="text-gray-500">Вы ещё не создали курсов.</p>';
+            return;
+          }
+
+          coursesList.innerHTML = teacherCourses.map(course => `
+            <div class="p-4 bg-gray-50 rounded-lg flex justify-between items-center">
+              <div>
+                <h3 class="font-medium">${course.title}</h3>
+                <p class="text-sm text-gray-500">${course.desc}</p>
+                <p class="text-sm text-gray-500 mt-1">${course.duration} | ${course.price} ₽</p>
+              </div>
+            </div>
+          `).join('');
+        } catch (error) {
+          alert('Ошибка загрузки курсов!');
+        }
+      }
+
+      // Поиск учеников
+      document.getElementById('searchBtn').addEventListener('click', async () => {
+        const query = document.getElementById('searchQuery').value.trim();
+        if (!query) return;
+
+        try {
+          const students = await searchStudents(query);
+          const searchResults = document.getElementById('searchResults');
+
+          if (students.length === 0) {
+            searchResults.innerHTML = '<p class="text-gray-500">Ученики не найдены.</p>';
+            return;
+          }
+
+          searchResults.innerHTML = students.map(student => `
+            <div class="p-4 bg-gray-50 rounded-lg flex justify-between items-center">
+              <div>
+                <p><strong>Логин:</strong> ${student.login}</p>
+                <p><strong>Email:</strong> ${student.email}</p>
+              </div>
+              <button
+                onclick="viewStudentProgress(${student.id}, '${student.login}')"
+                class="bg-blue-600 text-white px-3 py-1 rounded-lg text-sm"
+              >
+                Прогресс
+              </button>
+            </div>
+          `).join('');
+        } catch (error) {
+          alert(`Ошибка: ${error.message}`);
+        }
+      });
+
+      // Просмотр прогресса ученика
+      window.viewStudentProgress = async function(studentId, studentName) {
+        try {
+          const progress = await getStudentProgress(studentId);
+          if (progress.length === 0) {
+            alert(`У ${studentName} нет прогресса.`);
+            return;
+          }
+
+          alert(`Прогресс ${studentName}:\n\n${progress.map(p => `- ${p.title}: ${p.progress}%`).join('\n')}`);
+        } catch (error) {
+          alert(`Ошибка: ${error.message}`);
+        }
+      };
+
+      // Загрузка данных при открытии
+      loadTeacherCourses();
+
+      document.getElementById('logoutBtn').addEventListener('click', () => {
+        localStorage.clear();
+        window.location.replace('http://localhost:8000/login.html');
+      });
+    });
+  </script>
+</body>
+</html>

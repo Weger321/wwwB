@@ -1,0 +1,74 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "login": "Богдан",
+      "password": "Bog228228",
+      "email": "ivanovbogdan632@gmail.com",
+      "role": "student"
+    },
+    {
+      "id": 2,
+      "login": "Mak",
+      "password": "Bog228228",
+      "email": "diktorhaos@gmail.com",
+      "role": "teacher"
+    },
+    {
+      "id": 3,
+      "login": "diktor",
+      "password": "Bog228228",
+      "email": "bogdanivanov@gmail.com",
+      "role": "teacher"
+    }
+  ],
+  "courses": [
+    {
+      "id": 1,
+      "title": "Курс по Python",
+      "desc": "Изучите основы программирования на Python за 3 месяца",
+      "duration": "3 месяца",
+      "price": 1000,
+      "teacher": "teacher",
+      "end_date": "2024-12-31",
+      "lessons": [
+        {
+          "id": 1,
+          "title": "Введение в Python",
+          "completed": false
+        },
+        {
+          "id": 2,
+          "title": "Переменные и типы данных",
+          "completed": false
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Курс по JavaScript",
+      "desc": "Создание интерактивных веб-страниц",
+      "duration": "2 месяца",
+      "price": 1500,
+      "teacher": "teacher",
+      "end_date": "2024-11-30",
+      "lessons": []
+    }
+  ],
+  "progress": [
+    {
+      "user_id": 1,
+      "course_id": 1,
+      "title": "Курс по Python",
+      "progress": 0,
+      "lessons": []
+    },
+    {
+      "user_id": 3,
+      "course_id": 2,
+      "title": "Курс по JavaScript",
+      "progress": 0,
+      "lessons": []
+    }
+  ]
+}

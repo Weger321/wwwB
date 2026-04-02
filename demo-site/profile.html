@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Профиль</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+  <header class="bg-white shadow-sm">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+      <h1 class="text-2xl font-bold">Мой профиль</h1>
+      <div class="flex gap-4">
+        <a href="courses.html" class="bg-gray-200 px-4 py-2 rounded-lg">Курсы</a>
+        <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded-lg">Выйти</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-8">
+    <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+      <h2 class="text-xl font-semibold mb-4">Информация</h2>
+      <div id="userInfo"></div>
+      <button id="deleteAccountBtn" class="mt-4 bg-red-500 text-white px-4 py-2 rounded-lg">Удалить аккаунт</button>
+    </div>
+
+    <div class="bg-white p-6 rounded-lg shadow-md">
+      <h2 class="text-xl font-semibold mb-4">Мой прогресс</h2>
+      <div id="progressList" class="space-y-4"></div>
+    </div>
+  </main>
+
+  <script src="scripts/api.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const user = JSON.parse(localStorage.getItem('user'));
+      if (!user) {
+        window.location.replace('http://localhost:8000/login.html');
+        return;
+      }
+
+      document.getElementById('userInfo').innerHTML = `
+        <p><strong>Логин:</strong> ${user.login}</p>
+        <p><strong>Email:</strong> ${user.email}</p>
+        <p><strong>Роль:</strong> ${user.role === 'student' ? 'Ученик' : 'Учитель'}</p>
+      `;
+
+      try {
+        const progress = await getStudentProgress(user.id);
+        const progressList = document.getElementById('progressList');
+
+        if (progress.length === 0) {
+          progressList.innerHTML = '<p class="text-gray-500">Вы ещё не записаны на курсы.</p>';
+          return;
+        }
+
+        progressList.innerHTML = progress.map(item => `
+          <div class="p-4 bg-gray-50 rounded-lg">
+            <div class="flex justify-between items-center mb-2">
+              <h3 class="font-medium">${item.title}</h3>
+              <span class="text-sm text-gray-500">${item.progress}%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2.5">
+              <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${item.progress}%"></div>
+            </div>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Ошибка загрузки прогресса:', error);
+      }
+
+      document.getElementById('deleteAccountBtn').addEventListener('click', async () => {
+        if (confirm('Вы уверены, что хотите удалить аккаунт?')) {
+          try {
+            await deleteUser(user.id);
+            localStorage.clear();
+            alert('Аккаунт удалён!');
+            window.location.replace('http://localhost:8000/login.html');
+          } catch (error) {
+            alert(`Ошибка: ${error.message}`);
+          }
+        }
+      });
+
+      document.getElementById('logoutBtn').addEventListener('click', () => {
+        localStorage.clear();
+        window.location.replace('http://localhost:8000/login.html');
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Управление учениками</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+  <header class="bg-white shadow-sm">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+      <h1 class="text-2xl font-bold">Управление учениками</h1>
+      <div class="flex gap-4">
+        <a href="teacher.html" class="bg-gray-200 px-4 py-2 rounded-lg">Мои курсы</a>
+        <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded-lg">Выйти</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-8">
+    <!-- Поиск учеников -->
+    <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+      <h2 class="text-xl font-semibold mb-4">Поиск учеников</h2>
+      <div class="flex gap-4 mb-4">
+        <input type="text" id="searchQuery" placeholder="Введите логин или email" class="flex-1 p-3 border rounded-lg">
+        <button id="searchBtn" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700">Найти</button>
+      </div>
+      <div id="searchResults" class="space-y-4"></div>
+    </div>
+
+    <!-- Приглашение на курс -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+      <h2 class="text-xl font-semibold mb-4">Пригласить на курс</h2>
+      <form id="inviteForm">
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-2">Ученик</label>
+          <select id="studentSelect" class="w-full p-3 border rounded-lg" required>
+            <option value="">Выберите ученика</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-2">Курс</label>
+          <select id="courseSelect" class="w-full p-3 border rounded-lg" required>
+            <option value="">Выберите курс</option>
+          </select>
+        </div>
+        <button type="submit" class="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700">
+          Пригласить
+        </button>
+      </form>
+    </div>
+
+    <!-- Прогресс учеников -->
+    <div class="bg-white p-6 rounded-lg shadow-md mt-8">
+      <h2 class="text-xl font-semibold mb-4">Прогресс учеников</h2>
+      <div class="mb-4">
+        <label class="block text-sm font-medium mb-2">Выберите ученика</label>
+        <select id="progressStudentSelect" class="w-full p-3 border rounded-lg">
+          <option value="">Выберите ученика</option>
+        </select>
+      </div>
+      <div id="progressList" class="space-y-4"></div>
+    </div>
+  </main>
+
+  <script src="scripts/api.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = JSON.parse(localStorage.getItem('user'));
+
+      if (user?.role !== 'teacher') {
+        alert('Доступно только для учителей!');
+        window.location.replace('http://localhost:8000/courses.html');
+        return;
+      }
+
+      // Загрузка курсов учителя
+      async function loadTeacherCourses() {
+        try {
+          const courses = await getCourses();
+          const teacherCourses = courses.filter(course => course.teacher === user.login);
+          const courseSelect = document.getElementById('courseSelect');
+
+          courseSelect.innerHTML = '<option value="">Выберите курс</option>' +
+            teacherCourses.map(course => `
+              <option value="${course.id}">${course.title}</option>
+            `).join('');
+        } catch (error) {
+          alert('Ошибка загрузки курсов: ' + error.message);
+        }
+      }
+
+      // Поиск учеников
+      document.getElementById('searchBtn').addEventListener('click', async () => {
+        const query = document.getElementById('searchQuery').value.trim();
+        if (!query) return;
+
+        try {
+          const students = await searchStudents(query);
+          const searchResults = document.getElementById('searchResults');
+
+          if (students.length === 0) {
+            searchResults.innerHTML = '<p class="text-gray-500">Ученики не найдены.</p>';
+            return;
+          }
+
+          searchResults.innerHTML = students.map(student => `
+            <div class="p-4 bg-gray-50 rounded-lg flex justify-between items-center">
+              <div>
+                <p><strong>Логин:</strong> ${student.login}</p>
+                <p><strong>Email:</strong> ${student.email}</p>
+              </div>
+              <button
+                onclick="addToInviteList(${student.id}, '${student.login}')"
+                class="bg-blue-600 text-white px-3 py-1 rounded-lg text-sm"
+              >
+                Выбрать
+              </button>
+            </div>
+          `).join('');
+        } catch (error) {
+          alert('Ошибка поиска: ' + error.message);
+        }
+      });
+
+      // Добавление ученика в список для приглашения
+      window.addToInviteList = function(id, login) {
+        const studentSelect = document.getElementById('studentSelect');
+        const existingOption = Array.from(studentSelect.options).find(opt => opt.value == id);
+
+        if (!existingOption) {
+          const option = document.createElement('option');
+          option.value = id;
+          option.textContent = login;
+          studentSelect.appendChild(option);
+        }
+
+        studentSelect.value = id;
+        document.getElementById('searchQuery').value = '';
+        document.getElementById('searchResults').innerHTML = '';
+      };
+
+      // Приглашение на курс
+      document.getElementById('inviteForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const studentId = document.getElementById('studentSelect').value;
+        const courseId = document.getElementById('courseSelect').value;
+
+        if (!studentId || !courseId) {
+          alert('Выберите ученика и курс!');
+          return;
+        }
+
+        try {
+          const result = await inviteStudent(user.id, studentId, courseId);
+
+          if (result.success) {
+            alert(result.message);
+            loadStudentProgressList();
+          } else {
+            alert(result.error || 'Ошибка приглашения');
+          }
+        } catch (error) {
+          alert('Ошибка: ' + error.message);
+        }
+      });
+
+      // Загрузка списка учеников для отслеживания прогресса
+      async function loadStudentProgressList() {
+        try {
+          const users = await getUsers();
+          const students = users.filter(u => u.role === 'student');
+          const progressStudentSelect = document.getElementById('progressStudentSelect');
+
+          progressStudentSelect.innerHTML = '<option value="">Выберите ученика</option>' +
+            students.map(student => `
+              <option value="${student.id}">${student.login} (${student.email})</option>
+            `).join('');
+        } catch (error) {
+          alert('Ошибка загрузки учеников: ' + error.message);
+        }
+      }
+
+      // Отображение прогресса ученика
+      document.getElementById('progressStudentSelect').addEventListener('change', async (e) => {
+        const studentId = e.target.value;
+        if (!studentId) return;
+
+        try {
+          const progress = await getStudentProgress(studentId);
+          const progressList = document.getElementById('progressList');
+
+          if (progress.length === 0) {
+            progressList.innerHTML = '<p class="text-gray-500">Прогресс не найден.</p>';
+            return;
+          }
+
+          progressList.innerHTML = progress.map(item => `
+            <div class="p-4 bg-gray-50 rounded-lg">
+              <h3 class="font-medium">${item.title}</h3>
+              <p class="text-sm text-gray-500">Прогресс: ${item.progress}%</p>
+              <p class="text-sm text-gray-500">Выполнено уроков: ${item.lessons.length}</p>
+            </div>
+          `).join('');
+        } catch (error) {
+          alert('Ошибка загрузки прогресса: ' + error.message);
+        }
+      });
+
+      // Выход
+      document.getElementById('logoutBtn').addEventListener('click', () => {
+        localStorage.clear();
+        window.location.replace('http://localhost:8000/login.html');
+      });
+
+      // Загрузить данные при открытии
+      loadTeacherCourses();
+      loadStudentProgressList();
+    });
+  </script>
+</body>
+</html>

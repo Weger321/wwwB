@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Вход</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+  <div class="min-h-screen flex items-center justify-center">
+    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+      <h1 class="text-2xl font-bold mb-6 text-center">Вход</h1>
+
+      <form id="loginForm">
+        <div class="mb-4">
+          <label class="block text-gray-700 mb-2">Логин</label>
+          <input type="text" id="login" class="w-full p-3 border rounded-lg" required>
+        </div>
+
+        <div class="mb-6">
+          <label class="block text-gray-700 mb-2">Пароль</label>
+          <input type="password" id="password" class="w-full p-3 border rounded-lg" required>
+        </div>
+
+        <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700">
+          Войти
+        </button>
+      </form>
+
+      <p class="mt-4 text-center">
+        Нет аккаунта? <a href="register.html" class="text-blue-600">Зарегистрироваться</a>
+      </p>
+    </div>
+  </div>
+
+  <script src="scripts/api.js"></script>
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const login = document.getElementById('login').value;
+      const password = document.getElementById('password').value;
+
+      try {
+        const user = await loginUser(login, password);
+
+        if (user.id) {
+          localStorage.setItem('user', JSON.stringify(user));
+          window.location.href = 'courses.html';
+        } else {
+          alert('Неверный логин или пароль!');
+        }
+      } catch (error) {
+        alert('Ошибка соединения: ' + error.message);
+      }
+    });
+  </script>
+</body>
+</html>

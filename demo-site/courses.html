@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Курсы</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+  <header class="bg-white shadow-sm">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+      <h1 class="text-2xl font-bold">Курсы</h1>
+      <div class="flex gap-4">
+        <a href="profile.html" class="bg-gray-200 px-4 py-2 rounded-lg">Профиль</a>
+        <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded-lg">Выйти</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-8">
+    <div id="coursesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+  </main>
+
+  <script src="scripts/api.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const user = JSON.parse(localStorage.getItem('user'));
+      if (!user) {
+        window.location.replace('http://localhost:8000/login.html');
+        return;
+      }
+
+      try {
+        const courses = await getCourses();
+        const coursesGrid = document.getElementById('coursesGrid');
+
+        if (courses.length === 0) {
+          coursesGrid.innerHTML = '<p class="text-gray-500">Курсы не найдены.</p>';
+          return;
+        }
+
+        coursesGrid.innerHTML = courses.map(course => `
+          <div class="bg-white p-6 rounded-lg shadow-md">
+            <h3 class="text-xl font-semibold">${course.title}</h3>
+            <p class="text-gray-600 mt-2">${course.desc}</p>
+            <p class="mt-4"><strong>Срок:</strong> ${course.duration}</p>
+            <p><strong>Цена:</strong> ${course.price} ₽</p>
+            <p><strong>Окончание:</strong> ${course.end_date}</p>
+            <button
+              onclick="showCourseDetails(${course.id}, '${course.title}', '${course.desc}', '${course.duration}', ${course.price})"
+              class="mt-4 w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+            >
+              Записаться
+            </button>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Ошибка:', error);
+        alert('Ошибка загрузки курсов!');
+      }
+
+      document.getElementById('logoutBtn').addEventListener('click', () => {
+        localStorage.clear();
+        window.location.replace('http://localhost:8000/login.html');
+      });
+    });
+
+    function showCourseDetails(courseId, title, desc, duration, price) {
+      if (confirm(`Вы уверены, что хотите записаться на курс "${title}"?\n\nСрок: ${duration}\nЦена: ${price} ₽`)) {
+        enrollStudent(courseId, title);
+      }
+    }
+
+    async function enrollStudent(courseId, title) {
+      const user = JSON.parse(localStorage.getItem('user'));
+      try {
+        await enrollCourse(user.id, courseId, title);
+        alert(`Вы записаны на курс "${title}"!`);
+      } catch (error) {
+        alert(`Ошибка: ${error.message}`);
+      }
+    }
+  </script>
+</body>
+</html>
+

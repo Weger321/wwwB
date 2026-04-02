@@ -1,0 +1,17 @@
+/* Минималистичные синие акценты */
+.btn-primary {
+    background-color: #3b82f6;
+    transition: background-color 0.2s;
+}
+.btn-primary:hover {
+    background-color: #2563eb;
+}
+
+/* Анимация для карточек курсов */
+.card-hover {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
